@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Four Hats</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Four Hats">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10141f" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+/* Layout: one narrow phone column with header, tabs and the current view; the capture bar is pinned to the bottom edge. */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --ink:#18213a; --muted:#5d6782; --line:#d5dbe7;
+  --accent:#2f55d4; --accent-ink:#ffffff; --good:#1f8a5b; --bad:#c23b3b;
+  --bishop:#2f55d4; --youth:#1f8a5b; --family:#c26a12; --work:#7b45c9; --inbox:#6b7591;
+  --tint:rgba(47,85,212,.08); --scrim:rgba(10,14,25,.45);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#10141f; --surface:#1a2030; --ink:#e8ecf6; --muted:#9aa4bf; --line:#2c3448;
+  --accent:#7d9bff; --accent-ink:#0d1222; --good:#4cc68d; --bad:#ff7b7b;
+  --bishop:#7d9bff; --youth:#4cc68d; --family:#f0a24e; --work:#b58cf3; --inbox:#9aa4bf;
+  --tint:rgba(125,155,255,.12); --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+[hidden]{display:none!important}
+body{color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:10px}
+.app{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px calc(170px + env(safe-area-inset-bottom,0px))}
+
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.date{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+h1{font-family:var(--display);font-weight:800;font-size:30px;line-height:1.05;margin:2px 0 0;text-wrap:balance}
+.sync{font-size:12px;color:var(--muted);margin-top:4px}
+.stuck{flex:none;border:0;background:var(--ink);color:var(--bg);font-weight:700;border-radius:999px;padding:11px 16px;font-size:15px;display:flex;align-items:center;gap:7px}
+
+nav{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin:16px 0 18px}
+nav button{border:0;background:transparent;border-radius:10px;padding:9px 4px;font-weight:700;color:var(--muted);font-size:15px}
+nav button[aria-selected="true"]{background:var(--tint);color:var(--ink)}
+.count{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:12px;line-height:20px;font-variant-numeric:tabular-nums}
+
+.sec{display:flex;flex-direction:column;gap:10px}
+.label{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;display:flex;justify-content:space-between;align-items:baseline}
+.label b{font-variant-numeric:tabular-nums;color:var(--ink)}
+
+.slot{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-height:72px}
+.slot .n{font-family:var(--display);font-weight:800;font-size:26px;color:var(--line);width:22px;text-align:center;flex:none}
+.slot.empty{border-style:dashed;background:transparent;color:var(--muted);width:100%;text-align:left;font-weight:700}
+.slot.done .t{text-decoration:line-through;color:var(--muted)}
+.body{flex:1;min-width:0}
+.t{overflow-wrap:anywhere}
+.step{font-size:14px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--muted);margin-top:3px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c,var(--inbox));flex:none;display:inline-block}
+
+.check{flex:none;width:34px;height:34px;border-radius:50%;border:2.5px solid var(--c,var(--muted));background:transparent;display:grid;place-items:center;padding:0}
+.check svg{opacity:0}
+.check.on{background:var(--c,var(--good));border-color:var(--c,var(--good))}
+.check.on svg{opacity:1;color:var(--surface)}
+.icon{flex:none;width:38px;height:38px;border:0;border-radius:10px;background:transparent;color:var(--muted);display:grid;place-items:center;padding:0}
+.icon:disabled{opacity:.35}
+.icon.on{color:var(--family)}
+
+.win{background:var(--good);color:var(--surface);border-radius:18px;padding:18px}
+.win h2{font-family:var(--display);font-size:24px;margin:0 0 4px}
+.win p{margin:0}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.plan h2{font-family:var(--display);font-size:22px;margin:0}
+.plan p{margin:0;color:var(--muted)}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:var(--tint);color:var(--ink)}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+
+.hats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.hat{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;font-weight:700;font-size:14px;color:var(--muted)}
+.hat .dot{width:12px;height:12px}
+.hat small{font-size:12px;font-variant-numeric:tabular-nums}
+.hat[aria-selected="true"]{border-color:var(--c);color:var(--ink);box-shadow:inset 0 0 0 1px var(--c)}
+
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.item{display:flex;align-items:center;gap:10px;padding:12px 8px 12px 14px;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.sort{display:flex;gap:4px;flex:none}
+.sort button{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--c);background:transparent;color:var(--c);font-weight:800;font-size:13px;padding:0}
+.empty-note{color:var(--muted);text-align:center;padding:28px 12px;border:1px dashed var(--line);border-radius:16px}
+.empty-note strong{display:block;color:var(--ink);font-family:var(--display);font-size:19px;margin-bottom:4px}
+.foot{margin-top:28px;font-size:13px;color:var(--muted);text-align:center}
+.foot button{border:0;background:none;color:var(--accent);font-weight:700;padding:4px;font-size:13px}
+
+.capture{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.capture .in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.pick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.pick::-webkit-scrollbar{display:none}
+.pick button{flex:none;border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:6px}
+.pick button[aria-pressed="true"]{border-color:var(--c);color:var(--ink);background:var(--tint)}
+.field{display:flex;gap:8px}
+.field input{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 14px;font-size:17px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.field .btn{padding:12px 18px}
+
+.scrim{position:fixed;inset:0;z-index:40;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:88%;overflow:auto;background:var(--surface);border-radius:22px 22px 0 0;
+  padding:20px max(18px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.sheet h2{font-family:var(--display);font-size:24px;margin:0;text-wrap:balance;overflow-wrap:anywhere}
+.sheet p{margin:0;color:var(--muted)}
+.sheet input[type=text]{width:100%;border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:12px 14px;font-size:17px}
+.focus-task{font-family:var(--display);font-size:26px;font-weight:800;line-height:1.15;overflow-wrap:anywhere}
+.timer{font-family:var(--display);font-size:64px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;color:var(--accent)}
+.opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1.5px solid var(--line);background:transparent;border-radius:12px;padding:11px 12px}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--tint)}
+.grp{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:4px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);
+  border-radius:12px;padding:10px 12px 10px 16px;display:flex;align-items:center;gap:12px;font-weight:700;font-size:15px;max-width:calc(100% - 32px)}
+.toast button{border:0;background:transparent;color:var(--bg);text-decoration:underline;font-weight:700}
+
+/* sign-in */
+.auth{max-width:420px;margin:0 auto;padding:12vh max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.auth .mark{display:grid;grid-template-columns:repeat(2,22px);gap:6px}
+.auth .mark span{width:22px;height:22px;border-radius:50%}
+.auth h1{font-size:40px}
+.auth p{margin:0;color:var(--muted)}
+.auth label{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.auth input{width:100%;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:13px 14px;font-size:17px;margin-top:4px}
+.auth input:focus{outline:none;border-color:var(--accent)}
+.auth .msg{font-size:15px;color:var(--ink);background:var(--tint);border-radius:12px;padding:10px 12px}
+.auth .msg.err{color:var(--bad)}
+.linkish{border:0;background:none;color:var(--accent);font-weight:700;padding:6px 0;text-align:left}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .2s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
+</style>
+</head>
+<body>
+
+<!-- Sign-in screen -->
+<section class="auth" id="authView" hidden>
+  <div class="mark" aria-hidden="true"><span style="background:var(--bishop)"></span><span style="background:var(--youth)"></span><span style="background:var(--family)"></span><span style="background:var(--work)"></span></div>
+  <h1>Four Hats</h1>
+  <p id="authLead">Sign in once. Your phone remembers you after that.</p>
+  <form id="authForm" class="sec" autocomplete="on">
+    <div><label for="email">Email</label><input id="email" type="email" autocomplete="username" required></div>
+    <div><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" minlength="6" required></div>
+    <div class="msg" id="authMsg" hidden></div>
+    <button class="btn" type="submit" id="authSubmit">Sign in</button>
+    <button class="linkish" type="button" id="authSwitch">New here? Create an account</button>
+  </form>
+</section>
+
+<!-- Main app -->
+<div id="appView" hidden>
+  <div class="app">
+    <header>
+      <div>
+        <div class="date" id="date"></div>
+        <h1 id="hello">Four Hats</h1>
+        <div class="sync" id="sync">Loading…</div>
+      </div>
+      <button class="stuck" id="stuckBtn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Stuck</button>
+    </header>
+    <nav role="tablist">
+      <button role="tab" id="tab-today" data-tab="today">Today</button>
+      <button role="tab" id="tab-hats" data-tab="hats">Hats</button>
+      <button role="tab" id="tab-inbox" data-tab="inbox">Inbox</button>
+    </nav>
+    <main id="view"></main>
+    <div class="foot"><span id="who"></span> · <button type="button" id="signOut">Sign out</button></div>
+  </div>
+
+  <form class="capture" id="capture" autocomplete="off">
+    <div class="in">
+      <div class="pick" id="pick"></div>
+      <div class="field">
+        <input id="captureInput" type="text" placeholder="Get it out of your head…" enterkeyhint="done" aria-label="New task" maxlength="300">
+        <button class="btn" type="submit">Add</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+/* ======================================================================
+   SETUP: paste your Supabase project values here.
+   Dashboard -> Project Settings -> API: "Project URL" and the "anon public" key.
+   The anon key is meant to be public; row level security protects the data.
+   ====================================================================== */
+const SUPABASE_URL = 'https://sjwarllnehssyphoormc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_eGv0iwOKZ1DP6JixaXZnrQ_vI6nax4S';
+
+/* ---------------------------------------------------------------------- */
+const HATS=[
+  {id:'bishop',name:'Bishop',c:'var(--bishop)'},
+  {id:'youth',name:'Youth',c:'var(--youth)'},
+  {id:'family',name:'Family',c:'var(--family)'},
+  {id:'work',name:'Work',c:'var(--work)'}];
+const hatOf=id=>HATS.find(h=>h.id===id);
+const colorOf=id=>id&&hatOf(id)?hatOf(id).c:'var(--inbox)';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dayKey=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const newId=()=>(crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)));
+const $=id=>document.getElementById(id);
+const CHECK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const SUN='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const MORE='<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+const TRASH='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+
+const configured=!SUPABASE_URL.includes('YOUR-PROJECT')&&!SUPABASE_ANON_KEY.includes('YOUR-ANON');
+const sb=configured&&window.supabase?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true}}):null;
+
+/* ---------- state ---------- */
+let session=null;
+let tasks=[];              // rows: {id,title,hat,step,done,done_at,today_date,today_pos,created_at}
+let pending={};            // id -> {op:'up',row} | {op:'del'}  (unsynced changes, survives reloads)
+let ui={tab:'today',hat:'bishop',capHat:null};
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+const cacheKey=()=>'fh-cache-'+(session?.user?.id||'none');
+const pendKey=()=>'fh-pending-'+(session?.user?.id||'none');
+Object.assign(ui,store.get('fh-ui',{}));ui.capHat=null;
+
+function loadCache(){tasks=store.get(cacheKey(),[]);pending=store.get(pendKey(),{})}
+function saveCache(){store.set(cacheKey(),tasks);store.set(pendKey(),pending)}
+function setSync(t){$('sync').textContent=t}
+
+/* ---------- sync ---------- */
+const toRow=t=>({id:t.id,user_id:session.user.id,title:t.title,hat:t.hat||null,step:t.step||'',done:!!t.done,done_at:t.done_at||null,today_date:t.today_date||null,today_pos:t.today_pos??null,created_at:t.created_at});
+function save(t){pending[t.id]={op:'up',row:toRow(t)};changed()}
+function changed(){saveCache();render();flushSoon()}
+let flushTimer=null,flushing=false;
+function flushSoon(){clearTimeout(flushTimer);flushTimer=setTimeout(flush,400)}
+async function flush(){
+  if(!sb||!session||flushing)return;
+  const snap={...pending};const ids=Object.keys(snap);if(!ids.length){setSync('Synced');return}
+  flushing=true;setSync('Saving…');
+  try{
+    const ups=ids.filter(i=>snap[i].op==='up').map(i=>snap[i].row);
+    const dels=ids.filter(i=>snap[i].op==='del');
+    if(ups.length){const {error}=await sb.from('fh_tasks').upsert(ups);if(error)throw error}
+    if(dels.length){const {error}=await sb.from('fh_tasks').delete().in('id',dels);if(error)throw error}
+    for(const i of ids)if(pending[i]===snap[i])delete pending[i];
+    saveCache();setSync(Object.keys(pending).length?'Saving…':'Synced');
+  }catch(e){
+    console.warn('Sync failed',e);
+    setSync(navigator.onLine?'Not synced yet. Will retry.':'Offline. Changes saved on this phone.');
+    flushing=false;setTimeout(flush,15000);return;
+  }
+  flushing=false;
+  if(Object.keys(pending).length)flushSoon();
+}
+async function refresh(){
+  if(!sb||!session)return;
+  const since=new Date(Date.now()-14*864e5).toISOString();
+  const {data,error}=await sb.from('fh_tasks').select('id,title,hat,step,done,done_at,today_date,today_pos,created_at')
+    .or('done.eq.false,done_at.gt.'+since).order('created_at',{ascending:false});
+  if(error){console.warn(error);setSync(navigator.onLine?'Could not load. Showing saved copy.':'Offline. Showing saved copy.');return}
+  const map=new Map(data.map(r=>[r.id,r]));
+  for(const [id,p] of Object.entries(pending)){
+    if(p.op==='del')map.delete(id);
+    else{const {user_id,...r}=p.row;map.set(id,r)}
+  }
+  tasks=[...map.values()].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+  saveCache();render();flush();
+}
+addEventListener('online',flush);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session){refresh()}});
+
+/* ---------- helpers ---------- */
+const open=()=>tasks.filter(t=>!t.done);
+const today=dayKey;
+const todayTasks=()=>tasks.filter(t=>t.today_date===today()).sort((a,b)=>(a.today_pos??9)-(b.today_pos??9));
+const doneToday=()=>tasks.filter(t=>t.done&&t.done_at&&dayKey(new Date(t.done_at))===today()).length;
+const find=id=>tasks.find(t=>t.id===id);
+function setTab(t){ui.tab=t;store.set('fh-ui',{tab:ui.tab,hat:ui.hat});render()}
+function chipFor(t){return `<span class="chip" style="--c:${colorOf(t.hat)}"><span class="dot"></span>${t.hat?hatOf(t.hat).name:'Inbox'}</span>`}
+
+/* ---------- render ---------- */
+function render(){
+  if(!session)return;
+  const now=new Date();
+  $('date').textContent=now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+  const hr=now.getHours();
+  $('hello').textContent=hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  const inboxN=open().filter(t=>!t.hat).length;
+  $('tab-inbox').innerHTML='Inbox'+(inboxN?`<span class="count">${inboxN}</span>`:'');
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===ui.tab));
+  $('view').innerHTML=ui.tab==='today'?viewToday():ui.tab==='hats'?viewHats():viewInbox();
+  renderPick();
+}
+function viewToday(){
+  const picks=todayTasks();
+  const doneN=picks.filter(t=>t.done).length;
+  let h='<div class="sec">';
+  if(picks.length===3&&doneN===3){
+    h+=`<div class="win"><h2>All three done.</h2><p>That's a real day's work. Anything else is a bonus.</p></div>`;
+  }else if(!picks.length){
+    h+= open().length
+      ? `<div class="plan"><h2>Pick your 3 for today</h2><p>Just three. Everything else waits in its hat.</p><div class="row"><button class="btn" data-act="plan">Choose 3</button></div></div>`
+      : `<div class="plan"><h2>Start with a brain dump</h2><p>Type anything on your mind in the box below: a call to make, an interview to schedule, a ticket to update. Sort it later.</p></div>`;
+  }
+  h+=`<div class="label"><span>Today's 3</span><b>${doneN} of 3 done</b></div>`;
+  for(let i=0;i<3;i++){
+    const t=picks[i];
+    if(t){
+      h+=`<div class="slot ${t.done?'done':''}" style="--c:${colorOf(t.hat)}">
+        <button class="check ${t.done?'on':''}" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Mark not done':'Mark done'}">${CHECK}</button>
+        <div class="body"><div class="t">${esc(t.title)}</div>${t.step?`<div class="step">First step: ${esc(t.step)}</div>`:''}${chipFor(t)}</div>
+        <button class="icon" data-act="unpick" data-id="${t.id}" aria-label="Remove from today">✕</button></div>`;
+    }else{
+      h+=`<button class="slot empty" data-act="plan"><span class="n">${i+1}</span>Pick a task</button>`;
+    }
+  }
+  const d=doneToday();
+  if(d)h+=`<div class="label" style="margin-top:6px"><span>Finished today</span><b>${d}</b></div>`;
+  return h+'</div>';
+}
+function viewHats(){
+  const counts=Object.fromEntries(HATS.map(x=>[x.id,open().filter(t=>t.hat===x.id).length]));
+  let h='<div class="hats" role="tablist">'+HATS.map(x=>`<button class="hat" role="tab" style="--c:${x.c}" aria-selected="${ui.hat===x.id}" data-act="hat" data-id="${x.id}"><span class="dot"></span>${x.name}<small>${counts[x.id]}</small></button>`).join('')+'</div>';
+  const list=open().filter(t=>t.hat===ui.hat);
+  if(!list.length)return h+`<div class="empty-note"><strong>Nothing under ${hatOf(ui.hat).name}</strong>Pick this hat in the bar below and add one.</div>`;
+  const full=todayTasks().length>=3;
+  h+='<div class="list">'+list.map(t=>{
+    const inToday=t.today_date===today();
+    return `<div class="item" style="--c:${colorOf(t.hat)}">
+      <button class="check" data-act="toggle" data-id="${t.id}" aria-label="Mark done">${CHECK}</button>
+      <div class="body"><div class="t">${esc(t.title)}</div>${t.step?`<div class="step">First step: ${esc(t.step)}</div>`:''}</div>
+      <button class="icon ${inToday?'on':''}" data-act="${inToday?'unpick':'pick'}" data-id="${t.id}" ${!inToday&&full?'disabled':''} aria-label="${inToday?'Remove from today':'Add to today'}">${SUN}</button>
+      <button class="icon" data-act="more" data-id="${t.id}" aria-label="Edit">${MORE}</button></div>`}).join('')+'</div>';
+  return h;
+}
+function viewInbox(){
+  const list=open().filter(t=>!t.hat);
+  if(!list.length)return `<div class="empty-note"><strong>Inbox clear</strong>Anything you add without a hat waits here until you sort it.</div>`;
+  return `<div class="sec"><div class="label"><span>Tap a hat to sort</span><b>${list.length}</b></div><div class="list">`+list.map(t=>`<div class="item">
+    <div class="body"><div class="t">${esc(t.title)}</div></div>
+    <div class="sort">${HATS.map(x=>`<button style="--c:${x.c}" data-act="sort" data-id="${t.id}" data-hat="${x.id}" aria-label="Move to ${x.name}">${x.name[0]}</button>`).join('')}</div>
+    <button class="icon" data-act="del" data-id="${t.id}" aria-label="Delete">${TRASH}</button></div>`).join('')+'</div></div>';
+}
+function renderPick(){
+  const opts=[{id:null,name:'Inbox',c:'var(--inbox)'},...HATS];
+  $('pick').innerHTML=opts.map(o=>`<button type="button" style="--c:${o.c}" aria-pressed="${ui.capHat===o.id}" data-cap="${o.id||''}"><span class="dot"></span>${o.name}</button>`).join('');
+}
+
+/* ---------- actions ---------- */
+function toggle(id){
+  const t=find(id);if(!t)return;
+  t.done=!t.done;t.done_at=t.done?new Date().toISOString():null;
+  save(t);
+  if(t.done){
+    const picks=todayTasks();
+    if(picks.length===3&&picks.every(p=>p.done))toast('All three done!');
+    else toast('Done.',()=>{t.done=false;t.done_at=null;save(t)});
+  }
+}
+function pick(id){
+  const t=find(id);const picks=todayTasks();if(!t||picks.length>=3||t.today_date===today())return;
+  const used=new Set(picks.map(p=>p.today_pos));
+  t.today_date=today();t.today_pos=[0,1,2].find(n=>!used.has(n));save(t);
+}
+function unpick(id){const t=find(id);if(!t)return;t.today_date=null;t.today_pos=null;save(t)}
+function del(id){
+  const i=tasks.findIndex(x=>x.id===id);if(i<0)return;
+  const [t]=tasks.splice(i,1);
+  pending[id]={op:'del'};changed();
+  toast('Deleted.',()=>{tasks.splice(i,0,t);if(t.today_date===today()&&todayTasks().length>=3){t.today_date=null;t.today_pos=null}save(t)});
+}
+
+document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)setTab(b.dataset.tab)});
+$('view').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  const id=b.dataset.id;
+  switch(b.dataset.act){
+    case 'toggle':toggle(id);break;
+    case 'pick':pick(id);break;
+    case 'unpick':unpick(id);break;
+    case 'plan':openPlan();break;
+    case 'hat':ui.hat=id;setTab('hats');break;
+    case 'sort':{const t=find(id);t.hat=b.dataset.hat;save(t);toast('Moved to '+hatOf(t.hat).name+'.');break}
+    case 'del':del(id);break;
+    case 'more':openMore(id);break;
+  }
+});
+$('pick').addEventListener('click',e=>{const b=e.target.closest('[data-cap]');if(!b)return;ui.capHat=b.dataset.cap||null;renderPick();$('captureInput').focus()});
+$('capture').addEventListener('submit',e=>{
+  e.preventDefault();
+  const inp=$('captureInput');const text=inp.value.trim();if(!text)return;
+  const t={id:newId(),title:text.slice(0,300),hat:ui.capHat,step:'',done:false,done_at:null,today_date:null,today_pos:null,created_at:new Date().toISOString()};
+  tasks.unshift(t);inp.value='';save(t);
+  toast('Added to '+(t.hat?hatOf(t.hat).name:'Inbox')+'.');
+});
+
+/* ---------- sheets ---------- */
+const scrim=$('scrim'),sheet=$('sheet');
+let tick=null;
+function openSheet(html){sheet.innerHTML=html;scrim.hidden=false;sheet.scrollTop=0}
+function closeSheet(){scrim.hidden=true;sheet.innerHTML='';clearInterval(tick);tick=null}
+scrim.addEventListener('click',e=>{if(e.target===scrim)closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!scrim.hidden)closeSheet()});
+
+function openPlan(){
+  const sel=todayTasks().map(t=>t.id);
+  const draw=()=>{
+    const groups=[...HATS,{id:null,name:'Inbox'}].map(g=>{
+      const list=open().filter(t=>(t.hat||null)===g.id);if(!list.length)return'';
+      return `<div class="grp">${g.name}</div>`+list.map(t=>`<button class="opt" data-id="${t.id}" aria-pressed="${sel.includes(t.id)}" style="--c:${colorOf(t.hat)}"><span class="dot"></span><span class="t">${esc(t.title)}</span></button>`).join('');
+    }).join('');
+    const y=sheet.scrollTop;
+    openSheet(`<h2>Pick up to 3</h2><p>${sel.length} of 3 chosen. Pick the ones that matter most, not the easiest.</p>
+      <div class="sec" id="planList">${groups||'<p>No open tasks yet. Add some first.</p>'}</div>
+      <div class="row"><button class="btn" id="planDone">Set today</button><button class="btn ghost" id="planCancel">Cancel</button></div>`);
+    sheet.scrollTop=y;
+    $('planList').onclick=e=>{const b=e.target.closest('[data-id]');if(!b)return;const id=b.dataset.id;const i=sel.indexOf(id);
+      if(i>=0)sel.splice(i,1);else if(sel.length<3)sel.push(id);else{toast('Three is the limit.');return}
+      draw()};
+    $('planDone').onclick=()=>{
+      for(const t of todayTasks())if(!sel.includes(t.id)){t.today_date=null;t.today_pos=null;save(t)}
+      sel.forEach((id,n)=>{const t=find(id);if(t&&(t.today_date!==today()||t.today_pos!==n)){t.today_date=today();t.today_pos=n;save(t)}});
+      closeSheet();setTab('today');
+    };
+    $('planCancel').onclick=closeSheet;
+  };
+  draw();
+}
+
+function openMore(id){
+  const t=find(id);if(!t)return;
+  openSheet(`<h2>Edit task</h2>
+    <label class="grp" for="editText">Task</label><input type="text" id="editText" maxlength="300" value="${esc(t.title)}">
+    <label class="grp" for="editStep">Smallest first step</label><input type="text" id="editStep" maxlength="200" value="${esc(t.step)}" placeholder="e.g. Open the email and reply with one line">
+    <div class="grp">Move to</div>
+    <div class="row">${HATS.map(x=>`<button class="btn ghost" style="--c:${x.c}" data-hat="${x.id}"><span class="dot" style="margin-right:6px"></span>${x.name}</button>`).join('')}<button class="btn ghost" data-hat="">Inbox</button></div>
+    <div class="row"><button class="btn" id="saveMore">Save</button><button class="btn ghost" id="delMore">Delete</button></div>`);
+  sheet.querySelectorAll('[data-hat]').forEach(b=>b.onclick=()=>{t.hat=b.dataset.hat||null;closeSheet();save(t);toast('Moved to '+(t.hat?hatOf(t.hat).name:'Inbox')+'.')});
+  $('saveMore').onclick=()=>{const v=$('editText').value.trim();if(v)t.title=v.slice(0,300);t.step=$('editStep').value.trim().slice(0,200);closeSheet();save(t)};
+  $('delMore').onclick=()=>{closeSheet();del(id)};
+}
+
+/* Stuck: one task, one tiny step, five minutes. Today's picks first, then oldest tasks. */
+function stuckQueue(){
+  const tq=todayTasks().filter(t=>!t.done);
+  const rest=open().filter(t=>t.hat&&!tq.includes(t)).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
+  const inbox=open().filter(t=>!t.hat).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
+  return [...tq,...rest,...inbox];
+}
+function openStuck(i=0){
+  clearInterval(tick);tick=null;
+  const q=stuckQueue();
+  if(!q.length){openSheet(`<h2>Nothing on the list</h2><p>Close this and write down one thing that's nagging at you. That counts as starting.</p><button class="btn" id="ok">OK</button>`);$('ok').onclick=closeSheet;return}
+  const t=q[i%q.length];
+  openSheet(`<p>Just this one. Nothing else exists for five minutes.</p>
+    <div class="focus-task">${esc(t.title)}</div>${chipFor(t)}
+    <label class="grp" for="stepIn">What's the tiniest first move?</label>
+    <input type="text" id="stepIn" maxlength="200" value="${esc(t.step)}" placeholder="Something you could do in 2 minutes">
+    <div class="timer" id="clock" hidden>5:00</div>
+    <div class="row" id="stuckRow"><button class="btn" id="go">Start 5 minutes</button><button class="btn ghost" id="next">${q.length>1?'Different one':'Close'}</button></div>`);
+  const saveStep=()=>{const s=$('stepIn').value.trim().slice(0,200);if(s!==t.step){t.step=s;save(t)}};
+  $('next').onclick=()=>{saveStep();q.length>1?openStuck(i+1):closeSheet()};
+  $('go').onclick=()=>{
+    saveStep();
+    const end=Date.now()+300000;const clock=$('clock');clock.hidden=false;
+    $('stuckRow').innerHTML=`<button class="btn" id="fin">Finished it</button><button class="btn ghost" id="stop">Stop</button>`;
+    $('fin').onclick=()=>{closeSheet();if(!t.done)toggle(t.id)};
+    $('stop').onclick=closeSheet;
+    const draw=()=>{const left=Math.max(0,Math.round((end-Date.now())/1000));clock.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
+      if(!left){clearInterval(tick);tick=null;clock.textContent='Time';sheet.querySelector('p').textContent="Five minutes done. Keep going if you've got momentum, or stop. Either one counts."}};
+    draw();tick=setInterval(draw,1000);
+  };
+}
+$('stuckBtn').addEventListener('click',()=>openStuck(0));
+
+/* ---------- toast ---------- */
+let toastT=null;
+function toast(msg,undo){
+  const el=$('toast');
+  el.innerHTML=esc(msg)+(undo?'<button type="button">Undo</button>':'');
+  el.hidden=false;
+  if(undo)el.querySelector('button').onclick=()=>{undo();el.hidden=true};
+  clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,undo?5000:2200);
+}
+
+/* ---------- auth ---------- */
+let signUpMode=false;
+function authMsg(text,err){const m=$('authMsg');m.textContent=text;m.className='msg'+(err?' err':'');m.hidden=!text}
+function setAuthMode(up){
+  signUpMode=up;
+  $('authSubmit').textContent=up?'Create account':'Sign in';
+  $('authSwitch').textContent=up?'Have an account? Sign in':'New here? Create an account';
+  $('password').autocomplete=up?'new-password':'current-password';
+  authMsg('');
+}
+$('authSwitch').onclick=()=>setAuthMode(!signUpMode);
+$('authForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!sb){authMsg('Add your Supabase URL and anon key at the top of index.html first.',true);return}
+  const email=$('email').value.trim(),password=$('password').value;
+  $('authSubmit').disabled=true;authMsg('');
+  try{
+    if(signUpMode){
+      const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
+      if(error)throw error;
+      if(!data.session){authMsg('Check your email and tap the confirmation link, then sign in here.');setAuthMode(false);authMsg('Check your email and tap the confirmation link, then sign in here.')}
+    }else{
+      const {error}=await sb.auth.signInWithPassword({email,password});
+      if(error)throw error;
+    }
+  }catch(err){authMsg(err.message||'Something went wrong. Try again.',true)}
+  $('authSubmit').disabled=false;
+});
+$('signOut').onclick=async()=>{
+  if(Object.keys(pending).length&&navigator.onLine)await flush();
+  await sb.auth.signOut();
+};
+
+function showAuth(){$('appView').hidden=true;$('authView').hidden=false;
+  if(!configured)authMsg('Setup needed: paste your Supabase Project URL and anon key into the SETUP block near the top of index.html.',true)}
+function showApp(){
+  $('authView').hidden=true;$('appView').hidden=false;
+  $('who').textContent=session.user.email||'Signed in';
+  loadCache();render();setSync('Loading…');refresh();
+}
+let currentUser=null;
+function onSession(s){
+  const uid=s?.user?.id||null;
+  session=s;
+  if(uid===currentUser)return;
+  currentUser=uid;
+  if(s)showApp();else{tasks=[];pending={};showAuth()}
+}
+if(sb){
+  sb.auth.onAuthStateChange((_ev,s)=>onSession(s));
+  sb.auth.getSession().then(({data})=>onSession(data.session));
+}else showAuth();
+
+/* new day while the app stays open */
+setInterval(()=>{if(session&&!document.hidden)render()},60000);
+</script>
+</body>
+</html>
