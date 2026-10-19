@@ -21,7 +21,7 @@
 :root{
   --bg:#eef1f6; --surface:#ffffff; --ink:#18213a; --muted:#5d6782; --line:#d5dbe7;
   --accent:#2f55d4; --accent-ink:#ffffff; --good:#1f8a5b; --bad:#c23b3b;
-  --bishop:#2f55d4; --youth:#1f8a5b; --family:#c26a12; --work:#7b45c9; --inbox:#6b7591;
+  --calling:#2f55d4; --community:#1f8a5b; --family:#c26a12; --work:#7b45c9; --inbox:#6b7591;
   --tint:rgba(47,85,212,.08); --scrim:rgba(10,14,25,.45);
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -30,7 +30,7 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#10141f; --surface:#1a2030; --ink:#e8ecf6; --muted:#9aa4bf; --line:#2c3448;
   --accent:#7d9bff; --accent-ink:#0d1222; --good:#4cc68d; --bad:#ff7b7b;
-  --bishop:#7d9bff; --youth:#4cc68d; --family:#f0a24e; --work:#b58cf3; --inbox:#9aa4bf;
+  --calling:#7d9bff; --community:#4cc68d; --family:#f0a24e; --work:#b58cf3; --inbox:#9aa4bf;
   --tint:rgba(125,155,255,.12); --scrim:rgba(0,0,0,.6); color-scheme:dark}}
 
 *{box-sizing:border-box}
@@ -87,7 +87,7 @@ nav button[aria-selected="true"]{background:var(--tint);color:var(--ink)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 
 .hats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
-.hat{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;font-weight:700;font-size:14px;color:var(--muted)}
+.hat{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;font-weight:700;font-size:13px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
 .hat .dot{width:12px;height:12px}
 .hat small{font-size:12px;font-variant-numeric:tabular-nums}
 .hat[aria-selected="true"]{border-color:var(--c);color:var(--ink);box-shadow:inset 0 0 0 1px var(--c)}
@@ -149,7 +149,7 @@ nav button[aria-selected="true"]{background:var(--tint);color:var(--ink)}
 
 <!-- Sign-in screen -->
 <section class="auth" id="authView" hidden>
-  <div class="mark" aria-hidden="true"><span style="background:var(--bishop)"></span><span style="background:var(--youth)"></span><span style="background:var(--family)"></span><span style="background:var(--work)"></span></div>
+  <div class="mark" aria-hidden="true"><span style="background:var(--calling)"></span><span style="background:var(--community)"></span><span style="background:var(--family)"></span><span style="background:var(--work)"></span></div>
   <h1>Four Hats</h1>
   <p id="authLead">Sign in once. Your phone remembers you after that.</p>
   <form id="authForm" class="sec" autocomplete="on">
@@ -207,11 +207,14 @@ const SUPABASE_ANON_KEY = 'sb_publishable_eGv0iwOKZ1DP6JixaXZnrQ_vI6nax4S';
 
 /* ---------------------------------------------------------------------- */
 const HATS=[
-  {id:'bishop',name:'Bishop',c:'var(--bishop)'},
-  {id:'youth',name:'Youth',c:'var(--youth)'},
-  {id:'family',name:'Family',c:'var(--family)'},
-  {id:'work',name:'Work',c:'var(--work)'}];
+  {id:'calling',name:'Calling',abbr:'Ca',c:'var(--calling)'},
+  {id:'community',name:'Community',abbr:'Co',c:'var(--community)'},
+  {id:'family',name:'Family',abbr:'Fa',c:'var(--family)'},
+  {id:'work',name:'Work',abbr:'Wo',c:'var(--work)'}];
 const hatOf=id=>HATS.find(h=>h.id===id);
+/* earlier versions used bishop/youth */
+const OLD_HATS={bishop:'calling',youth:'community'};
+const fixHat=h=>OLD_HATS[h]||(hatOf(h)?h:null);
 const colorOf=id=>id&&hatOf(id)?hatOf(id).c:'var(--inbox)';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -229,7 +232,7 @@ const sb=configured&&window.supabase?window.supabase.createClient(SUPABASE_URL,S
 let session=null;
 let tasks=[];              // rows: {id,title,hat,step,done,done_at,today_date,today_pos,created_at}
 let pending={};            // id -> {op:'up',row} | {op:'del'}  (unsynced changes, survives reloads)
-let ui={tab:'today',hat:'bishop',capHat:null};
+let ui={tab:'today',hat:'calling',capHat:null};
 const store={
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
@@ -237,9 +240,13 @@ const store={
 };
 const cacheKey=()=>'fh-cache-'+(session?.user?.id||'none');
 const pendKey=()=>'fh-pending-'+(session?.user?.id||'none');
-Object.assign(ui,store.get('fh-ui',{}));ui.capHat=null;
+Object.assign(ui,store.get('fh-ui',{}));ui.capHat=null;ui.hat=fixHat(ui.hat)||'calling';
 
-function loadCache(){tasks=store.get(cacheKey(),[]);pending=store.get(pendKey(),{})}
+function loadCache(){
+  tasks=store.get(cacheKey(),[]);pending=store.get(pendKey(),{});
+  tasks.forEach(t=>t.hat=fixHat(t.hat));
+  Object.values(pending).forEach(p=>{if(p.row)p.row.hat=fixHat(p.row.hat)});
+}
 function saveCache(){store.set(cacheKey(),tasks);store.set(pendKey(),pending)}
 function setSync(t){$('sync').textContent=t}
 
@@ -274,7 +281,7 @@ async function refresh(){
   const {data,error}=await sb.from('fh_tasks').select('id,title,hat,step,done,done_at,today_date,today_pos,created_at')
     .or('done.eq.false,done_at.gt.'+since).order('created_at',{ascending:false});
   if(error){console.warn(error);setSync(navigator.onLine?'Could not load. Showing saved copy.':'Offline. Showing saved copy.');return}
-  const map=new Map(data.map(r=>[r.id,r]));
+  const map=new Map(data.map(r=>[r.id,{...r,hat:fixHat(r.hat)}]));
   for(const [id,p] of Object.entries(pending)){
     if(p.op==='del')map.delete(id);
     else{const {user_id,...r}=p.row;map.set(id,r)}
@@ -354,7 +361,7 @@ function viewInbox(){
   if(!list.length)return `<div class="empty-note"><strong>Inbox clear</strong>Anything you add without a hat waits here until you sort it.</div>`;
   return `<div class="sec"><div class="label"><span>Tap a hat to sort</span><b>${list.length}</b></div><div class="list">`+list.map(t=>`<div class="item">
     <div class="body"><div class="t">${esc(t.title)}</div></div>
-    <div class="sort">${HATS.map(x=>`<button style="--c:${x.c}" data-act="sort" data-id="${t.id}" data-hat="${x.id}" aria-label="Move to ${x.name}">${x.name[0]}</button>`).join('')}</div>
+    <div class="sort">${HATS.map(x=>`<button style="--c:${x.c}" data-act="sort" data-id="${t.id}" data-hat="${x.id}" aria-label="Move to ${x.name}">${x.abbr}</button>`).join('')}</div>
     <button class="icon" data-act="del" data-id="${t.id}" aria-label="Delete">${TRASH}</button></div>`).join('')+'</div></div>';
 }
 function renderPick(){
