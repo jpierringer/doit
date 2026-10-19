@@ -1,6 +1,6 @@
 # Four Hats
 
-A low-friction daily planner for your phone. It has quick capture, four hats (Bishop, Youth, Family, Work), a Today's 3 screen, and a Stuck button.
+A low-friction daily planner for your phone. It has quick capture, four hats (Calling, Community, Family, Work), a Today's 3 screen, and a Stuck button.
 It's a single `index.html` on GitHub Pages, with your tasks stored in Supabase.
 
 ## Files
@@ -26,14 +26,14 @@ It's a single `index.html` on GitHub Pages, with your tasks stored in Supabase.
 - **Capture:** type in the bottom bar and tap Add. Choose a hat first, or leave it on Inbox and sort it later.
 - **Today:** pick up to 3 tasks. They reset automatically each morning, and unfinished ones go back to their hats.
 - **Hats:** see one hat at a time. The sun icon adds a task to Today; the ••• menu edits it, sets the first step, or moves it.
-- **Inbox:** tap B / Y / F / W to file an item.
+- **Inbox:** tap Ca / Co / Fa / Wo to file an item.
 - **Stuck:** shows one task. You write the tiniest first step and run a 5-minute timer.
 - Changes save to the phone instantly and sync to Supabase in the background. If you're offline, they sync when you're back.
 - Completed tasks stay visible for 14 days and then drop out of view. They're still in the database.
 
 ## Privacy
 
-Row level security limits every row to the signed-in owner. For bishop matters, keep titles short and use initials ("Follow up — J."). That way nothing sensitive sits in a task title.
+Row level security limits every row to the signed-in owner. For confidential Calling matters, keep titles short and use initials ("Follow up — J."). That way nothing sensitive sits in a task title.
 
 ## Later: Jira
 
